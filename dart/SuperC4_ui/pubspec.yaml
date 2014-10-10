@@ -1,6 +1,7 @@
 name: SuperC4_ui
 description: A sample Polymer application
 dependencies:
+    browser:
     polymer:
     core_elements:
     paper_elements:

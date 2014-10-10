@@ -557,3 +557,98 @@ build.dart --machine --changed=web/superc4_ui.html
 
 build.dart finished [1343 ms]
 
+---
+build.dart --machine --changed=web/superc4_ui.html
+
+build.dart finished [1368 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.html
+[{"method":"warning","params":{"file":"web/superc4_ui.html","message":"Only one \"application/dart\" script tag per document is allowed. See http://goo.gl/5HPeuP#polymer_7 for details.","line":105,"charStart":2651,"charEnd":2705}}]
+build.dart finished [1321 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+[{"method":"warning","params":{"file":"web/superc4_ui.html","message":"Only one \"application/dart\" script tag per document is allowed. See http://goo.gl/5HPeuP#polymer_7 for details.","line":105,"charStart":2651,"charEnd":2705}}]
+build.dart finished [1335 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.html
+
+build.dart finished [1275 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1282 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1393 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1364 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1336 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1377 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1367 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1330 ms]
+
+---
+build.dart --machine --clean
+
+build.dart finished [1270 ms]
+
+---
+build.dart --machine --full
+
+build.dart finished [1280 ms]
+
+---
+build.dart --machine --changed=pubspec.yaml
+
+build.dart finished [1262 ms]
+
+---
+build.dart --machine --changed=pubspec.yaml
+
+build.dart finished [1241 ms]
+
+---
+build.dart --machine --changed=pubspec.lock
+
+build.dart finished [1319 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1257 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1289 ms]
+
+---
+build.dart --machine --changed=web/superc4_ui.dart
+
+build.dart finished [1261 ms]
+
