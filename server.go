@@ -222,10 +222,10 @@ func (s *Server) handleWait(idStr string) (GameState, error) {
 	return p.Game.State, nil
 }
 
-func (s *Server) handleResume(idStr string) ([]int, error) {
+func (s *Server) handleResume(idStr string) ([]int, int, error) {
 	p, err := s.findPlayer(idStr)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	p.Game.Lock()
@@ -234,7 +234,7 @@ func (s *Server) handleResume(idStr string) ([]int, error) {
 	// Make a copy, so it won't be modified when we drop the lock
 	board := make([]int, len(p.Game.Board))
 	copy(board, p.Game.Board)
-	return board, nil
+	return board, p.Game.GameSize, nil
 }
 
 func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
@@ -256,15 +256,17 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) resumeHandler(w http.ResponseWriter, r *http.Request) {
-	board, err := s.handleResume(r.FormValue("id"))
+	board, gameSize, err := s.handleResume(r.FormValue("id"))
 	msg := struct {
-		Error   string
-		Success bool
-		Board   []int
+		Error    string
+		Success  bool
+		Board    []int
+		GameSize int
 	}{
 		readErr(err),
 		err == nil,
 		board,
+		gameSize,
 	}
 	json.NewEncoder(w).Encode(msg)
 }

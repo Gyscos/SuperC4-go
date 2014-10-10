@@ -23,11 +23,10 @@ func TestServer(t *testing.T) {
 
 	go func() {
 		notify := make(chan bool)
-		success, err := s.handleJoin(notify)
+		_, err := s.handleJoin(notify)
 		if err != nil {
 			eC <- err
 		}
-		log.Println(success.PlayerId)
 		sC <- true
 	}()
 
