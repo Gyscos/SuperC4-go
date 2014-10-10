@@ -100,9 +100,9 @@ func (s *Server) createGame(gameSize int) (int, int) {
 	return id1, id2
 }
 
-func (s *Server) findPlayer(r *http.Request) (*Player, error) {
+func (s *Server) findPlayer(idStr string) (*Player, error) {
 	// Find the player ID
-	pId, err := strconv.Atoi(r.FormValue("id"))
+	pId, err := strconv.Atoi(idStr)
 	if err != nil {
 		return nil, errors.New("cannot read player id")
 	}
@@ -116,20 +116,20 @@ func (s *Server) findPlayer(r *http.Request) (*Player, error) {
 	return p, nil
 }
 
-func (s *Server) handlePlay(r *http.Request) error {
+func (s *Server) handlePlay(pStr, xStr, yStr string) error {
 
-	p, err := s.findPlayer(r)
+	p, err := s.findPlayer(pStr)
 	if err != nil {
 		return err
 	}
 
 	// Find his command
-	x, err := strconv.Atoi(r.FormValue("x"))
+	x, err := strconv.Atoi(xStr)
 	if err != nil {
 		return errors.New("cannot read target cell")
 	}
 
-	y, err := strconv.Atoi(r.FormValue("y"))
+	y, err := strconv.Atoi(yStr)
 	if err != nil {
 		return errors.New("cannot read target cell")
 	}
@@ -165,8 +165,8 @@ func (s *Server) handlePlay(r *http.Request) error {
 	return nil
 }
 
-func (s *Server) handleLeave(r *http.Request) error {
-	p, err := s.findPlayer(r)
+func (s *Server) handleLeave(idStr string) error {
+	p, err := s.findPlayer(idStr)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (s *Server) handleLeave(r *http.Request) error {
 	return nil
 }
 
-func (s *Server) handleJoin(notify <-chan bool, r *http.Request) (JoinSuccess, error) {
+func (s *Server) handleJoin(notify <-chan bool) (JoinSuccess, error) {
 	req := NewJoinRequest()
 	s.Queue <- req
 
@@ -199,8 +199,8 @@ func (s *Server) handleJoin(notify <-chan bool, r *http.Request) (JoinSuccess, e
 	return JoinSuccess{}, errors.New("Cancelled request")
 }
 
-func (s *Server) handleWait(r *http.Request) (GameState, error) {
-	p, err := s.findPlayer(r)
+func (s *Server) handleWait(idStr string) (GameState, error) {
+	p, err := s.findPlayer(idStr)
 	if err != nil {
 		return 0, err
 	}
@@ -222,8 +222,8 @@ func (s *Server) handleWait(r *http.Request) (GameState, error) {
 	return p.Game.State, nil
 }
 
-func (s *Server) handleResume(r *http.Request) ([]int, error) {
-	p, err := s.findPlayer(r)
+func (s *Server) handleResume(idStr string) ([]int, error) {
+	p, err := s.findPlayer(idStr)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (s *Server) handleResume(r *http.Request) ([]int, error) {
 func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 	// Create a user, wait for a match.
 	notify := w.(http.CloseNotifier).CloseNotify()
-	success, err := s.handleJoin(notify, r)
+	success, err := s.handleJoin(notify)
 	if err != nil {
 		return
 	}
@@ -256,7 +256,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) resumeHandler(w http.ResponseWriter, r *http.Request) {
-	board, err := s.handleResume(r)
+	board, err := s.handleResume(r.FormValue("id"))
 	msg := struct {
 		Error   string
 		Success bool
@@ -270,7 +270,7 @@ func (s *Server) resumeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) waitHandler(w http.ResponseWriter, r *http.Request) {
-	state, err := s.handleWait(r)
+	state, err := s.handleWait(r.FormValue("id"))
 	msg := struct {
 		Error    string
 		Success  bool
@@ -284,7 +284,7 @@ func (s *Server) waitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) leaveHandler(w http.ResponseWriter, r *http.Request) {
-	err := s.handleLeave(r)
+	err := s.handleLeave(r.FormValue("id"))
 
 	// Pack to json and send !
 	msg := struct {
@@ -298,7 +298,7 @@ func (s *Server) leaveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) playHandler(w http.ResponseWriter, r *http.Request) {
-	err := s.handlePlay(r)
+	err := s.handlePlay(r.FormValue("id"), r.FormValue("x"), r.FormValue("y"))
 	// Pack to json and send !
 	msg := struct {
 		Error   string
