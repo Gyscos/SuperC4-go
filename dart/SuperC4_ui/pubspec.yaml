@@ -1,0 +1,9 @@
+name: SuperC4_ui
+description: A sample Polymer application
+dependencies:
+    polymer:
+    core_elements:
+    paper_elements:
+transformers:
+- polymer:
+    entry_points: web/superc4_ui.html

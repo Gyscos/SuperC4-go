@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sample app</title>
+
+<!-- include the web_components polyfills with support for Dart. -->
+<script src="packages/web_components/platform.js"></script>
+<script src="packages/web_components/dart_support.js"></script>
+
+<link rel="import" href="packages/core_elements/core_scaffold.html">
+<link rel="import" href="packages/core_elements/core_header_panel.html">
+<link rel="import" href="packages/core_elements/core_menu.html">
+<link rel="import" href="packages/core_elements/core_item.html">
+
+<link rel="import" href="packages/paper_elements/paper_radio_group.html">
+<link rel="import" href="packages/paper_elements/paper_button.html">
+
+<link rel="stylesheet" href="superc4_ui.css">
+
+<style shim-shadowdom>
+html,body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: RobotoDraft, 'Helvetica Neue', Helvetica, Arial;
+  font-size: 16px;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-touch-callout: none;
+}
+
+core-scaffold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.content {
+  background-color: #fff;
+  height: 5000px;
+  padding: 20px;
+}
+
+/* some default styles for mode="cover" on core-scaffold */
+core-scaffold[mode=cover]::shadow core-header-panel::shadow #mainContainer
+  {
+  left: 120px;
+}
+
+core-scaffold[mode=cover] .content {
+  margin: 20px 100px 20px 0;
+}
+
+paper-button[raisedButton] {
+  background-color: #fff;
+}
+paper-button[raisedButton]:hover {
+  background-color: #eee;
+}
+paper-button[raisedButton]::shadow #ripple {
+  color: #000;
+}
+
+</style>
+</head>
+<body unresolved>
+
+
+  <core-scaffold>
+    <core-header-panel navigation flex mode="seamed"> 
+      <core-toolbar style="background-color: #526E9C; color: #fff;">New Game</core-toolbar>
+      <div style="padding:15px;text-align:center;">
+        <h3>Play against</h3>  
+        <paper-radio-group selected="human">
+          <paper-radio-button name="human" label="Human"></paper-radio-button><br />
+          
+          <paper-radio-button name="ai_easy" label="Easy AI"></paper-radio-button>
+          <paper-radio-button name="ai_hard" label="Hard AI"></paper-radio-button>
+        </paper-radio-group>
+        <br><br>
+        <paper-button raisedButton label="New game"></paper-button>
+      </div>
+    </core-header-panel>
+
+
+    <div tool>SuperC4</div>
+
+    <div class="content">
+      <p>Hello world from Dart!</p>
+
+      <div id="sample_container_id">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+
+
+  </core-scaffold>
+
+  <!-- bootstrap polymer -->
+  <script type="application/dart">export 'package:polymer/init.dart';</script>
+  <script src="packages/browser/dart.js"></script>
+</body>
+</html>
