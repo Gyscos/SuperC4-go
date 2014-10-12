@@ -22,7 +22,7 @@ func main() {
 	rand.Seed(42)
 
 	// UI
-	http.HandleFunc("/", mainHandler)
+	http.Handle("/", http.FileServer(http.Dir("js/web/")))
 
 	s := NewServer()
 
@@ -39,5 +39,8 @@ func main() {
 	}
 
 	log.Println("Listening to port", *port)
-	http.ListenAndServe(":"+strconv.Itoa(*port), nil)
+	err := http.ListenAndServe(":"+strconv.Itoa(*port), nil)
+	if err != nil {
+		log.Println("Error:", err)
+	}
 }

@@ -29,6 +29,10 @@ packages:
     description: core_elements
     source: hosted
     version: "0.3.1+1"
+  css_animation:
+    description: css_animation
+    source: hosted
+    version: "0.1.7"
   csslib:
     description: csslib
     source: hosted

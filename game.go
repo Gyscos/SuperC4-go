@@ -13,6 +13,10 @@ const (
 	StateOver
 )
 
+type Point struct {
+	X, Y int
+}
+
 type Game struct {
 	sync.Mutex
 	Cond *sync.Cond
@@ -23,17 +27,17 @@ type Game struct {
 
 	State         GameState
 	CurrentPlayer int
+
+	LastMove Point
 }
 
 func NewGame(gameSize int) *Game {
 	game := &Game{
 		GameSize: gameSize,
 		Board:    make([]int, gameSize*gameSize),
-		State:    StatePlaying}
+		State:    StatePlaying,
+		LastMove: Point{-1, -1}}
 	game.Cond = sync.NewCond(game)
-	for i, _ := range game.Board {
-		game.Board[i] = -1
-	}
 	return game
 }
 
@@ -43,7 +47,9 @@ func (g *Game) Play(x, y int) error {
 		return err
 	}
 
-	g.SetCell(x, y, g.CurrentPlayer)
+	g.SetCell(x, y, g.CurrentPlayer+1)
+	g.LastMove = Point{x, y}
+
 	if g.IsWinningMove(x, y) {
 		g.State = StateOver
 	} else {
@@ -57,7 +63,7 @@ func (g *Game) SetCell(x, y int, value int) {
 }
 
 func (g *Game) IsWinningMove(x, y int) bool {
-	v := g.CurrentPlayer
+	v := g.CurrentPlayer + 1
 	// Horizontal
 	if 1+g.CountCells(x, y, 1, 0, v)+g.CountCells(x, y, -1, 0, v) >= 4 {
 		return true
@@ -117,7 +123,7 @@ func (g *Game) HasFreeCell(cx, cy int, dx, dy int) bool {
 		if !g.IsInBounds(nx, ny) {
 			break
 		}
-		if g.GetCell(nx, ny) == -1 {
+		if g.GetCell(nx, ny) == 0 {
 			return true
 		}
 	}
@@ -128,7 +134,7 @@ func (g *Game) IsValidPlay(x, y int) error {
 	if !g.IsInBounds(x, y) {
 		return errors.New("target is out of bounds")
 	}
-	if g.GetCell(x, y) != -1 {
+	if g.GetCell(x, y) != 0 {
 		return errors.New("target cell is not empty")
 	}
 

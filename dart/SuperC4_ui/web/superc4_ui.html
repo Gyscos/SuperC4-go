@@ -30,8 +30,14 @@
   body {
     font-family: RobotoDraft, 'Helvetica Neue', Helvetica, Arial;
     font-size: 16px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
     -webkit-touch-callout: none;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   core-scaffold {
@@ -66,8 +72,21 @@
     background-color: #eee;
   }
 
+  paper-button[raisedButton] #ripple,
   paper-button[raisedButton]::shadow #ripple {
     color: #000;
+  }
+
+  #abort_button {
+    background: #fdd;
+  }
+  #abort_button:hover {
+    background: #ecc;
+  }
+
+  #abort_button #ripple,
+  #abort_button::shadow #ripple {
+    color: #900;
   }
   </style>
 </head>
@@ -77,9 +96,9 @@
   <core-scaffold style="height:100%">
     <core-header-panel navigation flex mode="seamed">
       <core-toolbar style="background-color: #526E9C; color: #fff;">New Game</core-toolbar>
-      <div style="padding: 15px; text-align: center;">
+      <div id="play_against" style="padding: 15px; text-align: center;">
         <h3>Play against</h3>
-        <paper-radio-group selected="human">
+        <paper-radio-group selected="human" id="oponent_radio">
           <paper-radio-button name="human" label="Human"></paper-radio-button>
           <br>
           <paper-radio-button name="ai_easy" label="Easy AI"></paper-radio-button>
@@ -89,13 +108,29 @@
         <br>
         <paper-button id="newgame_button" raisedButton label="New game"></paper-button>
       </div>
+
+      <div id="joining" style="padding: 15px; text-align: center;display: none;">
+        <h3>Looking for opponent...</h3>
+        <br><br>
+        <paper-button id="abort_button" raisedButton label="Cancel"></paper-button>
+      </div>
+
+      <div id="playing_against" style="padding: 15px; text-align: center;display: none;">
+        <h3>Playing against</h3>
+        <br>
+        <div id="opponent">Human</div>
+        <br><br>
+        <paper-button id="leave_button" raisedButton label="Leave"></paper-button>
+      </div>
+
     </core-header-panel>
 
 
     <div tool>SuperC4</div>
-
     <div fit class="content">
-        <canvas id="canvas" style="display:block;margin:auto;"></canvas>
+      <img id="image_x" style="display:none;" src="player_x.png">
+      <img id="image_o" style="display:none;" src="player_o.png">
+      <canvas id="canvas" style="display:block;margin:auto;"></canvas>
     </div>
   </core-scaffold>
 

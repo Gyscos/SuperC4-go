@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func readErr(err error) string {
@@ -27,8 +28,9 @@ type Server struct {
 }
 
 type JoinSuccess struct {
-	PlayerId int
-	GameSize int
+	PlayerId  int
+	GameSize  int
+	FirstMove bool
 }
 
 type JoinRequest struct {
@@ -47,7 +49,40 @@ func NewServer() *Server {
 		Players: make(map[int]*Player),
 		Queue:   make(chan *JoinRequest, 10)}
 	go s.matchMaking()
+	go s.clearGhosts()
 	return s
+}
+
+func (s *Server) clearGhosts() {
+	timeout := 10 * time.Minute
+	for {
+		time.Sleep(timeout)
+		log.Println("Clearing ghosts...")
+		s.clearGhostsOnce(timeout)
+	}
+}
+
+func (s *Server) clearGhost(p *Player) {
+	p.Game.Lock()
+	defer p.Game.Unlock()
+
+	log.Println("Clearing ghost player:", p.Id)
+
+	p.Game.State = StateCancelled
+	p.Game.Cond.Broadcast()
+
+	delete(s.Players, p.Id)
+}
+
+func (s *Server) clearGhostsOnce(timeout time.Duration) {
+	s.Lock()
+	defer s.Unlock()
+
+	for _, p := range s.Players {
+		if time.Since(p.LastSeen) > timeout {
+			s.clearGhost(p)
+		}
+	}
 }
 
 func (s *Server) matchMaking() {
@@ -62,8 +97,8 @@ func (s *Server) matchMaking() {
 		case r2 := <-s.Queue:
 			// Success !
 			id1, id2 := s.createGame(gameSize)
-			r1.Success <- JoinSuccess{id1, gameSize}
-			r2.Success <- JoinSuccess{id2, gameSize}
+			r1.Success <- JoinSuccess{id1, gameSize, true}
+			r2.Success <- JoinSuccess{id2, gameSize, false}
 		}
 	}
 }
@@ -80,9 +115,9 @@ func (s *Server) createPlayer() int {
 	defer s.Unlock()
 
 	for {
-		id := rand.Int()
+		id := rand.Intn(1000000)
 		if _, ok := s.Players[id]; !ok {
-			s.Players[id] = &Player{Id: id}
+			s.Players[id] = NewPlayer(id)
 			return id
 		}
 	}
@@ -122,6 +157,7 @@ func (s *Server) handlePlay(pStr, xStr, yStr string) error {
 	if err != nil {
 		return err
 	}
+	p.Tick()
 
 	// Find his command
 	x, err := strconv.Atoi(xStr)
@@ -199,27 +235,60 @@ func (s *Server) handleJoin(notify <-chan bool) (JoinSuccess, error) {
 	return JoinSuccess{}, errors.New("Cancelled request")
 }
 
-func (s *Server) handleWait(idStr string) (GameState, error) {
+func (s *Server) handleWait(notify <-chan bool, idStr string) (GameState, int, int, error) {
+	// Ok, this function is a mess.
+	// The goal is to wait on a condition, and also on a channel
+	// Unfortunately the select statement won't allow for a Wait() case
+	// So instead, we listen for the channel in a goroutine, and
+	// wake up the condition when something arrives.
+	// But unfortunately, the channel is not closed if the request is
+	// not cancelled. So we have to make this goroutine stop when
+	// everything goes smoothly. Ugh.
+
 	p, err := s.findPlayer(idStr)
 	if err != nil {
-		return 0, err
+		return 0, 0, 0, err
 	}
+	p.Tick()
 
 	p.Game.Lock()
 	defer p.Game.Unlock()
 
-	if p.Game.State == StatePlaying && p.Game.GetCurrentPlayer() != p {
+	// Of course, the timeout must be timeouted when no longer needed
+	timeoutTimer := make(chan struct{}, 1)
+	timeouted := false
+
+	// Start a timeout goroutine
+	go func() {
+		// Cancel the wait if we disconnected.
+		select {
+		case <-notify:
+			// Lock, so we don't wake it until the other routine is waiting
+			p.Game.Lock()
+			defer p.Game.Unlock()
+
+			timeouted = true
+			p.Game.Cond.Broadcast()
+		case <-timeoutTimer:
+		}
+
+	}()
+
+	for !timeouted && p.Game.State == StatePlaying && p.Game.GetCurrentPlayer() != p {
 		p.Game.Cond.Wait()
 	}
+
+	timeoutTimer <- struct{}{}
+
 	// Is it our turn to play ?
 
 	// We're done waiting when a player played or left.
 
 	if p.Game.State == StateCancelled {
-		return p.Game.State, errors.New("the other player left")
+		return p.Game.State, 0, 0, errors.New("the other player left")
 	}
 
-	return p.Game.State, nil
+	return p.Game.State, p.Game.LastMove.X, p.Game.LastMove.Y, nil
 }
 
 func (s *Server) handleResume(idStr string) ([]int, int, error) {
@@ -227,6 +296,7 @@ func (s *Server) handleResume(idStr string) ([]int, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
+	p.Tick()
 
 	p.Game.Lock()
 	defer p.Game.Unlock()
@@ -238,24 +308,29 @@ func (s *Server) handleResume(idStr string) ([]int, int, error) {
 }
 
 func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	// Create a user, wait for a match.
 	notify := w.(http.CloseNotifier).CloseNotify()
 	success, err := s.handleJoin(notify)
 	if err != nil {
 		return
 	}
+	log.Println("Success!", strconv.Itoa(success.PlayerId))
 
 	msg := struct {
-		PlayerId int
-		GameSize int
+		PlayerId  int
+		GameSize  int
+		FirstMove bool
 	}{
 		success.PlayerId,
 		success.GameSize,
+		success.FirstMove,
 	}
 	json.NewEncoder(w).Encode(msg)
 }
 
 func (s *Server) resumeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	board, gameSize, err := s.handleResume(r.FormValue("id"))
 	msg := struct {
 		Error    string
@@ -272,20 +347,25 @@ func (s *Server) resumeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) waitHandler(w http.ResponseWriter, r *http.Request) {
-	state, err := s.handleWait(r.FormValue("id"))
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	notify := w.(http.CloseNotifier).CloseNotify()
+	state, x, y, err := s.handleWait(notify, r.FormValue("id"))
 	msg := struct {
 		Error    string
 		Success  bool
 		GameOver bool
+		X, Y     int
 	}{
 		readErr(err),
 		err == nil,
 		state == StateOver,
+		x, y,
 	}
 	json.NewEncoder(w).Encode(msg)
 }
 
 func (s *Server) leaveHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	err := s.handleLeave(r.FormValue("id"))
 
 	// Pack to json and send !
@@ -300,6 +380,7 @@ func (s *Server) leaveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) playHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	err := s.handlePlay(r.FormValue("id"), r.FormValue("x"), r.FormValue("y"))
 	// Pack to json and send !
 	msg := struct {
@@ -315,6 +396,8 @@ func (s *Server) playHandler(w http.ResponseWriter, r *http.Request) {
 /// Now, debug API
 
 func (s *Server) listPlayersHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	s.Lock()
 	defer s.Unlock()
 	log.Println("Listing players")

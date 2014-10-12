@@ -5,6 +5,7 @@ dependencies:
     polymer:
     core_elements:
     paper_elements:
+    css_animation:
 transformers:
 - polymer:
     entry_points: web/superc4_ui.html
