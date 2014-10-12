@@ -22305,7 +22305,7 @@ var $$ = {};
         t1 = G.CanvasDrawer$(document.querySelector("#canvas"));
         t2 = new G.Game(null, 8, null, 0);
         t2.Game$0();
-        t2 = new G.GameManager(t1, t2, ":8080", E.CssAnimation$("opacity", 0, 1), E.CssAnimation$("opacity", 1, 0), null, null);
+        t2 = new G.GameManager(t1, t2, "http://abury.fr:8080", E.CssAnimation$("opacity", 0, 1), E.CssAnimation$("opacity", 1, 0), null, null);
         t2.GameManager$0();
         return t2;
       }}

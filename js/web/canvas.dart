@@ -244,7 +244,7 @@ class GameManager {
   CanvasDrawer cd = new CanvasDrawer(querySelector("#canvas"));
   Game game = new Game();
 
-  var server = ":8080";
+  var server = "http://abury.fr:8080";
 
   var fadeIn = new CssAnimation('opacity', 0, 1);
   var fadeOut = new CssAnimation('opacity', 1, 0);
