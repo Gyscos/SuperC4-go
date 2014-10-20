@@ -18,6 +18,9 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+	if flag.ErrHelp != nil {
+		return
+	}
 
 	rand.Seed(42)
 
