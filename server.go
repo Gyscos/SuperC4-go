@@ -235,7 +235,7 @@ func (s *Server) handleJoin(notify <-chan bool) (JoinSuccess, error) {
 	return JoinSuccess{}, errors.New("Cancelled request")
 }
 
-func (s *Server) handleWait(notify <-chan bool, idStr string) (GameState, int, int, error) {
+func (s *Server) handleWait(notify <-chan bool, idStr string) (state GameState, move Point, victory bool, err error) {
 	// Ok, this function is a mess.
 	// The goal is to wait on a condition, and also on a channel
 	// Unfortunately the select statement won't allow for a Wait() case
@@ -247,7 +247,7 @@ func (s *Server) handleWait(notify <-chan bool, idStr string) (GameState, int, i
 
 	p, err := s.findPlayer(idStr)
 	if err != nil {
-		return 0, 0, 0, err
+		return
 	}
 	p.Tick()
 
@@ -281,14 +281,18 @@ func (s *Server) handleWait(notify <-chan bool, idStr string) (GameState, int, i
 	timeoutTimer <- struct{}{}
 
 	// Is it our turn to play ?
+	state = p.Game.State
 
 	// We're done waiting when a player played or left.
 
-	if p.Game.State == StateCancelled {
-		return p.Game.State, 0, 0, errors.New("the other player left")
+	if state == StateCancelled {
+		err = errors.New("the other player left")
+		return
 	}
 
-	return p.Game.State, p.Game.LastMove.X, p.Game.LastMove.Y, nil
+	move = p.Game.LastMove
+	victory = (state == StateOver && p.Game.GetCurrentPlayer() == p)
+	return
 }
 
 func (s *Server) handleResume(idStr string) ([]int, int, error) {
@@ -311,6 +315,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	// Create a user, wait for a match.
 	notify := w.(http.CloseNotifier).CloseNotify()
+	// TODO: handle different opponent types (human, AI, ...)
 	success, err := s.handleJoin(notify)
 	if err != nil {
 		return
@@ -318,8 +323,11 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Success!", strconv.Itoa(success.PlayerId))
 
 	msg := struct {
-		PlayerId  int
-		GameSize  int
+		// PlayerId is the player's token to keep playing.
+		PlayerId int
+		// Currently, GameSize will always be 8. Here for future-proofing (??).
+		GameSize int
+		// FirstMove is TRUE if this player must play first.
 		FirstMove bool
 	}{
 		success.PlayerId,
@@ -347,19 +355,31 @@ func (s *Server) resumeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) waitHandler(w http.ResponseWriter, r *http.Request) {
+	// WaitHandler returns when one of these cases is true:
+	// * The game was cancelled: Success=false
+	// * The game is over (somebody has won): GameOver=true
+	// * It is the caller's turn to play
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	notify := w.(http.CloseNotifier).CloseNotify()
-	state, x, y, err := s.handleWait(notify, r.FormValue("id"))
+	state, p, victory, err := s.handleWait(notify, r.FormValue("id"))
 	msg := struct {
-		Error    string
-		Success  bool
+		// Error describes the error, if there is one.
+		Error string
+		// Success is TRUE if there was no error
+		Success bool
+		// GameOver is TRUE if the game was won
 		GameOver bool
-		X, Y     int
+		// Victory if TRUE if the player won
+		Victory bool
+		// Last move by the opponent
+		X, Y int
 	}{
 		readErr(err),
 		err == nil,
 		state == StateOver,
-		x, y,
+		victory,
+		p.X, p.Y,
 	}
 	json.NewEncoder(w).Encode(msg)
 }
@@ -369,6 +389,7 @@ func (s *Server) leaveHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.handleLeave(r.FormValue("id"))
 
 	// Pack to json and send !
+	// Although most of the time, he won't care about the answer...
 	msg := struct {
 		Error   string
 		Success bool
@@ -389,23 +410,6 @@ func (s *Server) playHandler(w http.ResponseWriter, r *http.Request) {
 	}{
 		readErr(err),
 		err == nil,
-	}
-	json.NewEncoder(w).Encode(msg)
-}
-
-/// Now, debug API
-
-func (s *Server) listPlayersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	s.Lock()
-	defer s.Unlock()
-	log.Println("Listing players")
-
-	msg := struct{ Players map[string]int }{make(map[string]int)}
-	for k, v := range s.Players {
-		log.Println("Adding a player", k)
-		msg.Players[strconv.Itoa(k)] = v.Id
 	}
 	json.NewEncoder(w).Encode(msg)
 }

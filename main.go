@@ -38,7 +38,7 @@ func main() {
 
 	if *debug {
 		log.Println("Warning: Debug API activated!! Do not use in production!")
-		http.HandleFunc("/debug/list/players", s.listPlayersHandler)
+		http.HandleFunc("/debug/status", s.debugStatusHandler)
 	}
 
 	log.Println("Listening to port", *port)
